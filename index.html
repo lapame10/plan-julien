@@ -191,7 +191,7 @@
 
 <div id="dayNav"></div>
 
-<div id="tipBox"><div class="tl" id="tipHead">Tip del día</div><div id="tipBody"><div class="tx" id="tipText"></div><div class="dt" id="tipDate"></div></div><div id="prCongrats"></div></div>
+<div id="tipBox"><div class="tl" id="tipHead">Astuce du jour</div><div id="tipBody"><div class="tx" id="tipText"></div><div class="dt" id="tipDate"></div></div><div id="prCongrats"></div></div>
 
 <div id="days"></div>
 
@@ -275,7 +275,7 @@ const DAYS = [
  ]},
 ];
 const WEEKS = ['Sem 1','Sem 2','Sem 3','Sem 4','Sem 5','Sem 6','Sem 7','Sem 8'];
-/* Peso base recomendado = 80% del ultimo peso usado por Julien */
+/* Poids de base = 80% du dernier poids utilise par Julien */
 const BASE = {
  'Back Squat':[72,90],
  'Bulgarian Split Squat':[11,14],
@@ -335,7 +335,7 @@ async function tipLoad(){
       const d=await r.json();
       if(d&&d.text){
         document.getElementById('tipText').innerHTML=d.text;
-        document.getElementById('tipDate').textContent=d.date?('Actualizado: '+d.date):'';
+        document.getElementById('tipDate').textContent=d.date?('Mis à jour : '+d.date):'';
         document.getElementById('tipBox').style.display='block';
       }
     }
