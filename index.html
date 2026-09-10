@@ -184,7 +184,7 @@
 </header>
 
 <div class="rules">
-  <div class="rule"><b>Minuterie :</b> tu mets 2:00, tu fais la série (le temps qu'il faut) et tu récupères le reste. La série suivante démarre quand la minuterie sonne.</div>
+  <div class="rule"><b>Minuterie :</b> tu mets 2:00, tu fais la série (le temps qu'il faut) et tu récupères le reste. La série suivante démarre quand le temps est écoulé (<b>bip</b> sonore).</div>
   <div class="rule cyan"><b>Exception :</b> Bulgarian Split Squat et Walking Lunges utilisent un cycle de <b>3:00</b>.</div>
   <div class="rule green"><b>Progression :</b> Semaine A tu montes le poids (si tu finis avec RIR 0-1) · Semaine B tu montes de 1-2 répétitions. Si tu fais <b>+12 répétitions</b>, ajoute 30s à la minuterie (2:00→2:30→3:00).</div>
 </div>
@@ -574,10 +574,28 @@ function renderProg(){
   progEl.textContent='Série '+(doneSets+1)+'/'+setsTotal;
   progEl.className=(doneSets>0)?'good':'';
 }
-function chime(){ try{ navigator.vibrate&&navigator.vibrate([250,120,250]);}catch(e){} }
+let AC=null;
+function audioUnlock(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(e){} }
+function chime(){
+  try{
+    audioUnlock();
+    const t0=AC.currentTime;
+    [0,0.22].forEach(function(off,i){
+      const o=AC.createOscillator(), g=AC.createGain();
+      o.type='sine'; o.frequency.value=(i===0?880:1180);
+      g.gain.setValueAtTime(0.0001,t0+off);
+      g.gain.exponentialRampToValueAtTime(0.4,t0+off+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+off+0.17);
+      o.connect(g); g.connect(AC.destination);
+      o.start(t0+off); o.stop(t0+off+0.19);
+    });
+  }catch(e){}
+  try{ navigator.vibrate&&navigator.vibrate([250,120,250]);}catch(e){}
+}
 function stopT(){ clearInterval(timerInt); running=false; clockEl.classList.remove('run');
   document.getElementById('tStart').textContent='DÉMARRER'; }
 function startT(){
+  audioUnlock();
   if(running){ stopT(); return; }
   if(left<=0||doneSets>=setsTotal){ left=total; doneSets=0; renderProg(); }
   running=true; clockEl.classList.add('run');
