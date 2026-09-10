@@ -450,6 +450,7 @@ function renderCongrats(){
 
 
 /* ====== CLIN D'OEIL ====== */
+const WINK_PREVIEW = (location.search.indexOf('preview')>=0);
 (function(){
   const mark=document.querySelector('.mark');
   const wink=document.getElementById('wink');
@@ -461,8 +462,10 @@ function renderCongrats(){
     tmr=setTimeout(function(){n=0;},2200);
     if(n>=3){
       n=0; wink.classList.add('show');
-      try{ fetch(RTDB+'/'+CLOUD+'/wink_seen.json',{method:'PUT',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({date:window._winkDate||'', ts:Date.now()})}); }catch(e){}
+      if(!WINK_PREVIEW){
+        try{ fetch(RTDB+'/'+CLOUD+'/wink_seen.json',{method:'PUT',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({date:window._winkDate||'', ts:Date.now()})}); }catch(e){}
+      }
     }
   });
   wink.addEventListener('click',function(){ wink.classList.remove('show'); });
@@ -472,7 +475,10 @@ async function winkLoad(){
     const r=await fetch(RTDB+'/'+CLOUD+'/wink.json',{cache:'no-store'});
     if(r.ok){
       const d=await r.json();
-      if(d&&d.text){ document.querySelector('#winkCard .wt').innerHTML=d.text; window._winkDate=d.date||''; }
+      if(d&&d.text){
+        document.querySelector('#winkCard .wt').innerHTML=d.text; window._winkDate=d.date||'';
+        if(WINK_PREVIEW){ document.getElementById('wink').classList.add('show'); }
+      }
     }
   }catch(e){}
 }
