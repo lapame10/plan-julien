@@ -454,19 +454,25 @@ function renderCongrats(){
   const mark=document.querySelector('.mark');
   const wink=document.getElementById('wink');
   if(!mark||!wink) return;
-  let n=0, tmr=null, hide=null;
+  let n=0, tmr=null;
   mark.style.cursor='pointer';
   mark.addEventListener('click',function(){
     n++; clearTimeout(tmr);
     tmr=setTimeout(function(){n=0;},2200);
-    if(n>=3){
-      n=0;
-      wink.classList.add('show');
-      clearTimeout(hide); hide=setTimeout(function(){wink.classList.remove('show');},9000);
-    }
+    if(n>=3){ n=0; wink.classList.add('show'); }
   });
   wink.addEventListener('click',function(){ wink.classList.remove('show'); });
 })();
+async function winkLoad(){
+  try{
+    const r=await fetch(RTDB+'/'+CLOUD+'/wink.json',{cache:'no-store'});
+    if(r.ok){
+      const d=await r.json();
+      if(d&&d.text){ document.querySelector('#winkCard .wt').innerHTML=d.text; }
+    }
+  }catch(e){}
+}
+winkLoad();
 
 prLoad();
 document.addEventListener('click',function(e){
