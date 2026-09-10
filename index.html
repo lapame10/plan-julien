@@ -66,6 +66,20 @@
   .ex .cyc{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--daycolor,var(--orange));
     background:color-mix(in srgb, var(--daycolor, #ff8a3d) 14%, transparent);padding:4px 9px;border-radius:8px;white-space:nowrap;}
   .ex .cyc.alt{color:var(--daycolor,var(--orange));background:color-mix(in srgb, var(--daycolor, #ff8a3d) 9%, transparent);border:1px solid color-mix(in srgb, var(--daycolor, #ff8a3d) 35%, transparent);}
+  /* CLIN D'OEIL (easter egg) */
+  #wink{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;
+    background:rgba(6,6,10,.82);opacity:0;visibility:hidden;transition:opacity .4s;padding:22px;}
+  #wink.show{opacity:1;visibility:visible;}
+  #winkCard{max-width:330px;text-align:center;border-radius:22px;padding:26px 22px;
+    background:linear-gradient(150deg,rgba(255,138,61,.20),rgba(255,122,184,.16));
+    border:1px solid rgba(255,138,61,.45);box-shadow:0 20px 60px rgba(0,0,0,.6);
+    transform:translateY(14px) scale(.97);transition:transform .45s cubic-bezier(.2,.8,.2,1);}
+  #wink.show #winkCard{transform:translateY(0) scale(1);}
+  #winkCard .wl{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--orange);font-weight:800;}
+  #winkCard .wt{font-size:19px;line-height:1.5;color:#fff;margin-top:14px;font-weight:600;}
+  #winkCard .wt em{display:block;margin-top:14px;font-style:normal;color:var(--orange);font-weight:800;}
+  #winkCard .wx{font-size:10px;color:var(--dim);margin-top:16px;}
+
   /* RECORDS + TOAST */
   #prWrap{margin:16px 16px 24px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);
     border-radius:14px;overflow:hidden;}
@@ -222,6 +236,12 @@
   <div id="prBody"><div id="prList" class="prlist"></div></div>
 </div>
 <div id="toast"></div>
+
+<div id="wink"><div id="winkCard">
+  <div class="wl">Pour toi</div>
+  <div class="wt">Ton schéma : la force.<br>Du contrôle. De l'intensité.<em>Et pour la suite… tu sais déjà 😏</em></div>
+  <div class="wx">(touche ton nom 3 fois)</div>
+</div></div>
 
 <footer>
   Règle A/B · Note chaque semaine en touchant un exercice.<br>
@@ -427,6 +447,26 @@ function renderCongrats(){
   box.innerHTML=hits.map(function(h){var nm=h.nm, v=h.v; return '🏆 <b>Bravo !</b> Hier tu as battu ton record sur <b>'+nm+'</b> : <b>'+v+'</b>. Continue comme ça ! 💪';}).join('');
   box.style.display='block';
 }
+
+
+/* ====== CLIN D'OEIL ====== */
+(function(){
+  const mark=document.querySelector('.mark');
+  const wink=document.getElementById('wink');
+  if(!mark||!wink) return;
+  let n=0, tmr=null, hide=null;
+  mark.style.cursor='pointer';
+  mark.addEventListener('click',function(){
+    n++; clearTimeout(tmr);
+    tmr=setTimeout(function(){n=0;},2200);
+    if(n>=3){
+      n=0;
+      wink.classList.add('show');
+      clearTimeout(hide); hide=setTimeout(function(){wink.classList.remove('show');},9000);
+    }
+  });
+  wink.addEventListener('click',function(){ wink.classList.remove('show'); });
+})();
 
 prLoad();
 document.addEventListener('click',function(e){
