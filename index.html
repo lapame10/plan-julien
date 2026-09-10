@@ -505,7 +505,7 @@ async function winkLoad(){
 }
 winkLoad();
 
-const LBL={sinRacha:'Commence ta série aujourd hui',anota:'Note tes poids et allume la première flamme',racha:'🔥 {n} jours de série',faltan:'Encore {n} pour {ico}',todos:'Collection complète !',chispa:'Étincelle',impulso:'Élan',constancia:'Constance',medalla:'Médaille',diamante:'Diamant',corona:'Couronne',leyenda:'Légende'};
+const LBL={sinRacha:'Commence ta série aujourd hui',anota:'Note tes poids et allume la première flamme',racha:'🔥 {n} jours de série',racha1:'🔥 {n} jour de série',faltan:'Encore {n} pour {ico}',todos:'Collection complète !',chispa:'Étincelle',impulso:'Élan',constancia:'Constance',medalla:'Médaille',diamante:'Diamant',corona:'Couronne',leyenda:'Légende'};
 
 /* ===== RACHA Y COLECCION ===== */
 let actCache={};
@@ -534,7 +534,7 @@ function renderStreak(){
     rs.textContent=LBL.anota;
   } else {
     fu.textContent='🔥'.repeat(Math.min(n,5))+(n>5?(' ×'+n):'');
-    rt.textContent=LBL.racha.replace('{n}',n);
+    rt.textContent=(n===1?LBL.racha1:LBL.racha).replace('{n}',n);
     const sig=ITEMS.find(it=>it[0]>n);
     rs.textContent=sig?(LBL.faltan.replace('{n}',sig[0]-n).replace('{ico}',sig[1])):LBL.todos;
   }
