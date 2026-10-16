@@ -448,7 +448,7 @@ try { logs = JSON.parse(localStorage.getItem(LS)) || {}; } catch(e) {}
 /* ====== SINCRONIZACION EN NUBE (Firebase Realtime) ====== */
 const RTDB='https://plan-gym-8aff7-default-rtdb.firebaseio.com';
 const CLOUD='julien';
-const BUILD='p11';   // SUBIR EN CADA DEPLOY -> auto-actualiza la pagina
+const BUILD='p12';   // SUBIR EN CADA DEPLOY -> auto-actualiza la pagina
 let _syncT=null;
 async function cloudLoad(){
   try{
@@ -1059,11 +1059,43 @@ if(dC) dC.onclick = () => {
 const dE = document.getElementById('dudasEnviar');
 if(dE) dE.onclick = dudasManda;
 
-/* y cada 40 s se mira si hay respuesta nueva */
-setInterval(() => {
-  if(document.getElementById('dudasBox').classList.contains('on')) dudasCarga();
-}, 40000);
-dudasCarga();
+/* ============================================================
+   COMPROBAR SI HAY RESPUESTA NUEVA
+   ============================================================
+   ⚠️ AQUI ESTABA EL FALLO. Antes solo se comprobaba si la ventana estaba
+   ABIERTA:
+
+       if (ventana abierta) dudasCarga();
+
+   Asi que el aviso (el circulito con el numero) solo salia al abrir la app de
+   cero. Si Julien ya la tenia abierta —que es lo normal, la abre para
+   entrenar— y le contestaban mientras, no se enteraba de nada. Y Pam decia
+   justo eso: "llega el mensaje pero no hay forma de que sepa".
+
+   Ahora se comprueba SIEMPRE, tenga la ventana abierta o no. Si esta abierta se
+   repinta el hilo, y si no, se actualiza el aviso del boton.
+
+   Cada 60 s. Y solo se repinta si de verdad ha cambiado algo, para no estar
+   tocando el DOM sin motivo.
+   ============================================================ */
+let ultimaHuella = '';
+async function dudasMira(){
+  try{
+    const r = await fetch(DUDA_RUTA, {cache:'no-store'});
+    if(!r.ok) return;
+    const d = await r.json();
+    const lista = d ? Object.values(d).sort((a,b)=>(a.t||0)-(b.t||0)) : [];
+    /* una huella de lo que hay: si no cambia, no hay nada que hacer */
+    const huella = lista.length + '|' + lista.map(m => m.t).join(',');
+    if(huella === ultimaHuella) return;
+    ultimaHuella = huella;
+    dudas = lista;
+    pintaDudas();
+  }catch(e){}
+}
+
+setInterval(dudasMira, 60000);
+dudasMira();
 
 renderDays();
 renderPRs();
