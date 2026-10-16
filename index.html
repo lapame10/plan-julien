@@ -439,6 +439,21 @@ const BASE = {
  'Hammer Curl':[6,8],
 };
 function baseInfo(n){ return BASE[n] ? BASE[n] : null; }
+/* ============================================================
+   EL SERVICE WORKER
+   ============================================================
+   Existe porque GitHub dice "no me pidas esto en 10 minutos", y con el icono de
+   la pantalla de inicio la app se queda con la version vieja. Pam publica algo,
+   lo prueba, y sigue viendo lo de antes — y con razon cree que no se publico.
+
+   Con esto, con cobertura, siempre ve lo ultimo.
+   ============================================================ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
 const LS = 'planJulienV1';
 
 /* ====== ESTADO / LOGS ====== */
@@ -448,7 +463,7 @@ try { logs = JSON.parse(localStorage.getItem(LS)) || {}; } catch(e) {}
 /* ====== SINCRONIZACION EN NUBE (Firebase Realtime) ====== */
 const RTDB='https://plan-gym-8aff7-default-rtdb.firebaseio.com';
 const CLOUD='julien';
-const BUILD='p12';   // SUBIR EN CADA DEPLOY -> auto-actualiza la pagina
+const BUILD='p13';   // SUBIR EN CADA DEPLOY -> auto-actualiza la pagina
 let _syncT=null;
 async function cloudLoad(){
   try{
