@@ -463,7 +463,7 @@ try { logs = JSON.parse(localStorage.getItem(LS)) || {}; } catch(e) {}
 /* ====== SINCRONIZACION EN NUBE (Firebase Realtime) ====== */
 const RTDB='https://plan-gym-8aff7-default-rtdb.firebaseio.com';
 const CLOUD='julien';
-const BUILD='p13';   // SUBIR EN CADA DEPLOY -> auto-actualiza la pagina
+const BUILD='p14';   // SUBIR EN CADA DEPLOY -> auto-actualiza la pagina
 let _syncT=null;
 async function cloudLoad(){
   try{
@@ -1109,8 +1109,47 @@ async function dudasMira(){
   }catch(e){}
 }
 
-setInterval(dudasMira, 60000);
+/* ============================================================
+   CUANDO SE COMPRUEBA SI HAY MENSAJE NUEVO
+   ============================================================
+   Pam: "sale el 1 pero solo si reinicio cada vez, si estoy anotando cosas no
+   sale". Y tenia razon: se comprobaba cada 60 segundos, asi que mientras
+   entrenaba y apuntaba series, podia pasar un minuto entero sin que apareciera.
+
+   Ahora se comprueba en CUATRO momentos, y el mas importante es el segundo:
+
+     1. cada 20 segundos (antes 60)
+     2. AL VOLVER A LA APP  <- este es el que de verdad importa en el movil
+     3. al tocar la pantalla, como mucho cada 15 s
+     4. al arrancar
+
+   El 2 es el clave, y por que: en iOS, cuando sales de la app y vuelves, el
+   sistema puede haber congelado la pestaña — y los temporizadores NO corren
+   mientras esta congelada. Asi que al volver hay que comprobar SIEMPRE, sin
+   esperar al siguiente tic. Es justo el momento en que Julien mira el movil
+   despues de una serie.
+
+   Y todos ellos son baratos: si no ha cambiado nada, la funcion sale sin tocar
+   la pantalla.
+   ============================================================ */
+setInterval(dudasMira, 20000);
 dudasMira();
+
+/* al volver a la app (el caso de iOS con la pestaña congelada) */
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) dudasMira();
+});
+
+/* y al tocar, con un freno de 15 s para no estar pidiendo sin parar */
+let ultimoToque = 0;
+['pointerdown','touchstart','keydown'].forEach(ev => {
+  document.addEventListener(ev, () => {
+    const ahora = Date.now();
+    if (ahora - ultimoToque < 15000) return;
+    ultimoToque = ahora;
+    dudasMira();
+  }, {passive:true});
+});
 
 renderDays();
 renderPRs();
