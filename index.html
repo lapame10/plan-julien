@@ -29,7 +29,42 @@
   /* HEADER */
   header{padding:calc(env(safe-area-inset-top,0px) + 34px) 20px 12px;text-align:center;
     background:linear-gradient(180deg,rgba(255,138,61,.14),rgba(255,138,61,.03) 55%,transparent 100%);}
-  .mark{display:inline-flex;align-items:center;justify-content:center;margin:0 auto 14px;
+  #bDudas{
+  position:fixed; right:14px; bottom:76px; z-index:60;
+  background:var(--card); color:var(--sub);
+  border:1px solid var(--line); border-radius:999px;
+  padding:10px 15px; font:inherit; font-size:13px; font-weight:600;
+  cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.35);
+}
+#bDudas:active{ transform:scale(.97) }
+.modal{
+  position:fixed; inset:0; z-index:200; display:none;
+  background:rgba(8,8,12,.72); backdrop-filter:blur(3px);
+  align-items:flex-end; justify-content:center; padding:0;
+}
+.modal.on{ display:flex }
+.mcard{
+  width:100%; max-width:560px; background:var(--card);
+  border:1px solid var(--line); border-radius:20px 20px 0 0;
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+  max-height:88vh; overflow-y:auto;
+}
+.mhead{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px }
+.mhead b{ font-size:16px }
+.mx{ background:none; border:none; color:var(--dim); font-size:19px; cursor:pointer; padding:4px 8px }
+.hilo{ margin:10px 0 }
+.hilo .m{ padding:9px 12px; border-radius:12px; margin-bottom:7px; font-size:14px; line-height:1.45 }
+.hilo .m.yo{ background:rgba(77,159,255,.13); border-left:2px solid #4d9fff }
+.hilo .m.el{ background:rgba(255,122,184,.11); border-left:2px solid #ff7ab8 }
+.hilo .m .h{ font-size:10.5px; color:var(--dim); margin-bottom:3px }
+#dudasTexto{
+  width:100%; font:inherit; font-size:15px; padding:11px; resize:vertical;
+  background:rgba(255,255,255,.04); border:1px solid var(--line);
+  border-radius:12px; color:#fff; outline:none;
+}
+#dudasTexto:focus{ border-color:var(--daycolor,var(--orange)) }
+.row{ display:flex; gap:8px; margin-top:10px }
+.mark{display:inline-flex;align-items:center;justify-content:center;margin:0 auto 14px;
     background:linear-gradient(135deg,var(--orange),#ffb37a);border-radius:14px;
     padding:10px 22px;box-shadow:0 8px 24px rgba(255,138,61,.35);}
   .mark span{font-size:15px;font-weight:900;color:#181008;letter-spacing:2.5px;text-transform:uppercase;}
@@ -236,6 +271,7 @@
 
 <header>
   <div class="mark"><span>Julien García</span></div>
+  <button id="bDudas" title="Preguntas sobre el programa">¿Dudas?</button>
   <div class="eyebrow">Force · Hypertrophie</div>
   <h1>Programme Hypertrophie</h1>
   <div class="subtitle"><span class="sep"></span>Retour à l'entraînement de force<span class="sep"></span></div>
@@ -303,6 +339,25 @@
   Règle A/B · Note chaque semaine en touchant un exercice.<br>
   Les données sont enregistrées sur cet appareil.
 </footer>
+
+<!-- ============ LAS DUDAS ============
+     Un boton de ayuda normal: preguntas sobre el programa y te contestan.
+     Lo que no se ve: que detras hay una persona a la que le llega al movil. -->
+<div id="dudasBox" class="modal">
+  <div class="mcard">
+    <div class="mhead">
+      <b>¿Algo que no se entiende?</b>
+      <button id="dudasCerrar" class="mx">✕</button>
+    </div>
+    <div class="mini">Escribe y te contesto. Si es de un ejercicio, dime cuál.</div>
+    <div id="dudasHilo" class="hilo"></div>
+    <textarea id="dudasTexto" rows="3" placeholder="Escribe aquí…"></textarea>
+    <div class="row">
+      <button class="btn" id="dudasEnviar">Enviar</button>
+    </div>
+    <div id="dudasMsg"></div>
+  </div>
+</div>
 
 <script>
 /* ====== DATOS DEL PLAN ====== */
@@ -378,7 +433,7 @@ try { logs = JSON.parse(localStorage.getItem(LS)) || {}; } catch(e) {}
 /* ====== SINCRONIZACION EN NUBE (Firebase Realtime) ====== */
 const RTDB='https://plan-gym-8aff7-default-rtdb.firebaseio.com';
 const CLOUD='julien';
-const BUILD='p9';   // SUBIR EN CADA DEPLOY -> auto-actualiza la pagina
+const BUILD='p10';   // SUBIR EN CADA DEPLOY -> auto-actualiza la pagina
 let _syncT=null;
 async function cloudLoad(){
   try{
@@ -872,6 +927,111 @@ renderClock(); renderProg();
    llegaba despues (async) sin repintar -> la tabla salia vacia aunque
    los registros estuvieran en la nube. Ahora se repinta al llegar.
    ============================================================ */
+/* ============================================================
+   LAS DUDAS (el buzon)
+   ============================================================
+   Un boton de ayuda. Escribes, se guarda en la nube, y te contestan.
+
+   Lo que no se ve desde aqui: que detras hay una persona a la que le llega al
+   movil, y que contesta ella. Para Julien es un boton de ayuda normal y asi
+   tiene que ser: la app no lleva ninguna llave de Telegram (una llave en una
+   pagina publica la lee cualquiera), asi que el mensaje va a la nube y alguien
+   lo recoge.
+
+   Y se ve el hilo entero: lo que preguntas y lo que te contestan, en orden.
+   Cuando hay algo nuevo sin leer, el boton lo dice.
+   ============================================================ */
+let dudas = [];
+let dudasUltimaVista = 0;
+try { dudasUltimaVista = +(localStorage.getItem('julienDudasVista') || 0); } catch(e) {}
+
+const DUDA_RUTA = RTDB + '/' + CLOUD + '/dudas.json';
+
+function horaCorta(t){
+  const d = new Date(t);
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+function pintaDudas(){
+  const h = document.getElementById('dudasHilo');
+  if(!h) return;
+  if(!dudas.length){
+    h.innerHTML = '<div class="mini" style="text-align:center;padding:14px 0">Todavía no hay nada escrito.</div>';
+  } else {
+    /* ⚠️ OJO CON ESTO: en los datos, 'yo' es JULIEN (el que escribe desde la app) y
+     'el' es el entrenador (Pam, que contesta desde Telegram). Estaba al reves y
+     las respuestas de Pam salian firmadas como si las hubiera escrito Julien. */
+  h.innerHTML = dudas.map(m => `<div class="m ${m.de==='yo'?'yo':'el'}">
+      <div class="h">${m.de==='yo'?'Tú':'Entrenador'} · ${horaCorta(m.t)}</div>
+      ${String(m.texto||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
+    </div>`).join('');
+    h.scrollTop = h.scrollHeight;
+  }
+  /* el boton avisa si hay algo nuevo que no has visto */
+  const pend = dudas.filter(m => m.de === 'yo' && (m.t||0) > dudasUltimaVista).length;
+  const b = document.getElementById('bDudas');
+  if(b) b.textContent = pend ? ('¿Dudas? (' + pend + ')') : '¿Dudas?';
+  if(b) b.style.color = pend ? 'var(--green)' : 'var(--sub)';
+}
+
+async function dudasCarga(){
+  try{
+    const r = await fetch(DUDA_RUTA, {cache:'no-store'});
+    if(!r.ok) return;
+    const d = await r.json();
+    if(!d) { dudas = []; pintaDudas(); return; }
+    dudas = Object.values(d).sort((a,b) => (a.t||0) - (b.t||0));
+    pintaDudas();
+  }catch(e){}
+}
+
+async function dudasManda(){
+  const ta = document.getElementById('dudasTexto');
+  const msg = document.getElementById('dudasMsg');
+  const t = (ta.value||'').trim();
+  if(!t){ msg.innerHTML = '<div class="mini">Escribe algo primero.</div>'; return; }
+
+  msg.innerHTML = '<div class="mini">Enviando…</div>';
+  const m = { de:'yo', t:Date.now(), texto:t };
+  try{
+    await fetch(DUDA_RUTA.replace('.json','/' + m.t + '.json'), {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(m)
+    });
+    ta.value = '';
+    dudas.push(m);
+    dudasUltimaVista = m.t;
+    try { localStorage.setItem('julienDudasVista', String(m.t)); } catch(e){}
+    pintaDudas();
+    msg.innerHTML = '<div class="mini" style="color:var(--green)">Enviado. Te contesto en cuanto pueda.</div>';
+  }catch(e){
+    msg.innerHTML = '<div class="mini" style="color:#e0654a">No se pudo enviar. Prueba otra vez.</div>';
+  }
+}
+
+/* el boton */
+const bD = document.getElementById('bDudas');
+if(bD) bD.onclick = () => {
+  document.getElementById('dudasBox').classList.add('on');
+  pintaDudas();
+  dudasCarga();
+};
+const dC = document.getElementById('dudasCerrar');
+if(dC) dC.onclick = () => {
+  document.getElementById('dudasBox').classList.remove('on');
+  /* al cerrar se da por visto */
+  dudasUltimaVista = Date.now();
+  try { localStorage.setItem('julienDudasVista', String(dudasUltimaVista)); } catch(e){}
+  pintaDudas();
+};
+const dE = document.getElementById('dudasEnviar');
+if(dE) dE.onclick = dudasManda;
+
+/* y cada 40 s se mira si hay respuesta nueva */
+setInterval(() => {
+  if(document.getElementById('dudasBox').classList.contains('on')) dudasCarga();
+}, 40000);
+dudasCarga();
+
 renderDays();
 renderPRs();
 cloudLoad().then(function(cambio){
@@ -922,5 +1082,6 @@ document.addEventListener('visibilitychange',function(){
   if(!document.hidden){ refrescarDatos(); vigilarVersion(); }
 });
 </script>
+
 </body>
 </html>
