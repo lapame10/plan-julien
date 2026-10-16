@@ -37,6 +37,21 @@
   cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.35);
 }
 #bDudas:active{ transform:scale(.97) }
+#bDudas{ position:fixed; display:flex; align-items:center; gap:7px }
+#bDudas.nuevo{
+  background:linear-gradient(135deg,#3dd68c,#2fbf7a); color:#0c1a12;
+  border-color:transparent; box-shadow:0 6px 22px rgba(61,214,140,.45);
+  animation:late 1.6s ease-in-out infinite;
+}
+@keyframes late{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.045)} }
+/* el numero: un circulo rojo pegado al boton, de los que se ven de lejos */
+#dudasBadge{
+  display:none; align-items:center; justify-content:center;
+  min-width:20px; height:20px; padding:0 5px;
+  background:#e0654a; color:#fff; border-radius:999px;
+  font-size:11.5px; font-weight:800; line-height:1;
+}
+#bDudas.nuevo #dudasBadge{ background:#0c1a12; color:#3dd68c }
 .modal{
   position:fixed; inset:0; z-index:200; display:none;
   background:rgba(8,8,12,.72); backdrop-filter:blur(3px);
@@ -271,7 +286,7 @@
 
 <header>
   <div class="mark"><span>Julien García</span></div>
-  <button id="bDudas" title="Preguntas sobre el programa">¿Dudas?</button>
+  <button id="bDudas" title="Preguntas sobre el programa">¿Dudas?<span id="dudasBadge">0</span></button>
   <div class="eyebrow">Force · Hypertrophie</div>
   <h1>Programme Hypertrophie</h1>
   <div class="subtitle"><span class="sep"></span>Retour à l'entraînement de force<span class="sep"></span></div>
@@ -433,7 +448,7 @@ try { logs = JSON.parse(localStorage.getItem(LS)) || {}; } catch(e) {}
 /* ====== SINCRONIZACION EN NUBE (Firebase Realtime) ====== */
 const RTDB='https://plan-gym-8aff7-default-rtdb.firebaseio.com';
 const CLOUD='julien';
-const BUILD='p10';   // SUBIR EN CADA DEPLOY -> auto-actualiza la pagina
+const BUILD='p11';   // SUBIR EN CADA DEPLOY -> auto-actualiza la pagina
 let _syncT=null;
 async function cloudLoad(){
   try{
@@ -967,11 +982,23 @@ function pintaDudas(){
     </div>`).join('');
     h.scrollTop = h.scrollHeight;
   }
-  /* el boton avisa si hay algo nuevo que no has visto */
-  const pend = dudas.filter(m => m.de === 'yo' && (m.t||0) > dudasUltimaVista).length;
+  /* ===== EL AVISO DE MENSAJE NUEVO =====
+     OJO CON ESTO, que ya me equivoque una vez: en los datos, 'yo' es JULIEN (el
+     que escribe desde su app) y 'el' es el entrenador (las respuestas).
+
+     Lo que Julien NO ha visto son las RESPUESTAS, o sea las de 'el'. Estaba
+     puesto al reves, asi que le salia un aviso por SUS PROPIOS mensajes y
+     ninguno por los mios. Justo lo contrario de lo que se quiere.
+
+     Se cuentan las respuestas posteriores a la ultima vez que abrio. */
+  const pend = dudas.filter(m => m.de !== 'yo' && (m.t||0) > dudasUltimaVista).length;
   const b = document.getElementById('bDudas');
-  if(b) b.textContent = pend ? ('¿Dudas? (' + pend + ')') : '¿Dudas?';
-  if(b) b.style.color = pend ? 'var(--green)' : 'var(--sub)';
+  const badge = document.getElementById('dudasBadge');
+  if(b) b.classList.toggle('nuevo', pend > 0);
+  if(badge){
+    badge.textContent = pend > 9 ? '9+' : String(pend);
+    badge.style.display = pend ? 'flex' : 'none';
+  }
 }
 
 async function dudasCarga(){
@@ -1014,6 +1041,12 @@ if(bD) bD.onclick = () => {
   document.getElementById('dudasBox').classList.add('on');
   pintaDudas();
   dudasCarga();
+  /* ===== AL ABRIR, EL AVISO DESAPARECE =====
+     Se marca como visto en cuanto ABRE, no al cerrar. Si se marcara al cerrar,
+     el numero seguiria ahi mientras lee, y parece que no se ha enterado. */
+  dudasUltimaVista = Date.now();
+  try { localStorage.setItem('julienDudasVista', String(dudasUltimaVista)); } catch(e){}
+  setTimeout(pintaDudas, 50);
 };
 const dC = document.getElementById('dudasCerrar');
 if(dC) dC.onclick = () => {
